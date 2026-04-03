@@ -611,18 +611,30 @@ const callToolWithReconnect = async (
       checkAuthError(result);
       return result;
     } catch (error: any) {
-      // Check if error message starts with "Error POSTing to endpoint (HTTP 40"
-      const isHttp40xError = error?.message?.startsWith?.('Error POSTing to endpoint (HTTP 40');
+      const errorMessage = String(error?.message || error || '');
+      const isHttp40xError = errorMessage.startsWith('Error POSTing to endpoint (HTTP 40');
+      const isInvalidSessionError =
+        errorMessage.includes('No valid session ID provided') ||
+        errorMessage.includes('Invalid or missing session ID') ||
+        errorMessage.includes('Session not found') ||
+        errorMessage.includes('Server not initialized');
       // Only retry for StreamableHTTPClientTransport
       const isStreamableHttp = serverInfo.transport instanceof StreamableHTTPClientTransport;
       const isSSE = serverInfo.transport instanceof SSEClientTransport;
-      if (
+      const shouldReconnect =
         attempt < maxRetries &&
         serverInfo.transport &&
-        ((isStreamableHttp && isHttp40xError) || isSSE)
-      ) {
+        ((isStreamableHttp && (isHttp40xError || isInvalidSessionError)) || isSSE);
+
+      if (shouldReconnect) {
+        const reconnectReason = isHttp40xError
+          ? 'HTTP 40x error'
+          : isInvalidSessionError
+            ? 'session/state error'
+            : 'error';
         console.warn(
-          `${isHttp40xError ? 'HTTP 40x error' : 'error'} detected for ${isStreamableHttp ? 'StreamableHTTP' : 'SSE'} server ${serverInfo.name}, attempting reconnection (attempt ${attempt + 1}/${maxRetries + 1})`,
+          `${reconnectReason} detected for ${isStreamableHttp ? 'StreamableHTTP' : 'SSE'} server ${serverInfo.name}, attempting reconnection (attempt ${attempt + 1}/${maxRetries + 1})`,
+          { errorMessage },
         );
 
         try {
