@@ -4,12 +4,6 @@ FROM python:3.13-slim-bookworm AS base
 # 替换 Debian apt 源为清华大学镜像
 RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources
 
-# 配置 npm 为淘宝镜像
-RUN npm config set registry https://registry.npmmirror.com
-
-# 配置 pnpm 为淘宝镜像
-RUN npm config set @pnpm:registry https://registry.npmmirror.com
-
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN apt-get update && apt-get install -y curl gnupg git build-essential \
@@ -18,12 +12,15 @@ RUN apt-get update && apt-get install -y curl gnupg git build-essential \
   && rm -f /tmp/node.tar.xz \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g pnpm
+# 配置 npm 和 pnpm 为淘宝镜像
+RUN npm config set registry https://registry.npmmirror.com \
+  && npm config set @pnpm:registry https://registry.npmmirror.com \
+  && npm install -g pnpm \
+  && pnpm config set registry https://registry.npmmirror.com
 
 ENV PNPM_HOME=/usr/local/share/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN mkdir -p $PNPM_HOME && \
-  pnpm config set registry https://registry.npmmirror.com && \
   pnpm add -g @amap/amap-maps-mcp-server @playwright/mcp@latest tavily-mcp@latest @modelcontextprotocol/server-github @modelcontextprotocol/server-slack
 
 ARG INSTALL_EXT=false
