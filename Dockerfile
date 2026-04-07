@@ -44,8 +44,7 @@ RUN if [ "$INSTALL_EXT" = "true" ]; then \
   apt-get clean && rm -rf /var/lib/apt/lists/*; \
   fi
 
-# 使用 uv 中国镜像
-RUN UV_PYTHON_INSTALL_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/python-release uv tool install mcp-server-fetch
+RUN uv tool install mcp-server-fetch
 
 WORKDIR /app
 
