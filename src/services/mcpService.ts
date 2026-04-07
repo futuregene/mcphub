@@ -645,7 +645,9 @@ const callToolWithReconnect = async (
           }
 
           serverInfo.client.close();
-          serverInfo.transport.close();
+          if (serverInfo.transport) {
+            serverInfo.transport.close();
+          }
 
           const server = await getServerDao().findById(serverInfo.name);
           if (!server) {
